@@ -1,17 +1,18 @@
 import { definePlugin } from "emdash";
-import type { PluginDescriptor, PluginContext } from "emdash";
+import type { PluginDescriptor, PluginContext, RouteContext } from "emdash";
 
 /**
  * emdash-insert-scripts
  * =========================================================================
  * Native EmDash plugin. Injects admin-configured HTML/scripts into the
- * rendered page via the render:inject-head and render:inject-body-end hooks.
+ * rendered page via render:inject-head and render:inject-body-end, with a
+ * React settings page under Plugins → Insert Scripts.
  *
- * Structure mirrors the proven native-plugin shape used by
- * @jdevalk/emdash-plugin-seo on this EmDash generation:
- *   - a descriptor factory (build time), imported in astro.config.mjs
- *   - a createPlugin() default (runtime), pointed to by the descriptor's
- *     self-referential `entrypoint`
+ * Structure follows @jdevalk/emdash-plugin-seo (same EmDash generation):
+ *   - descriptor factory (build time) with adminEntry + adminPages
+ *   - createPlugin() default (runtime) with hooks, routes, admin.pages
+ *   - src/admin.tsx exports `pages` mapping each adminPage path to a component
+ * Settings persist to plugin KV under `settings:*`.
  */
 
 const KEY = {
@@ -48,8 +49,8 @@ function isExcluded(path: string | null, raw: unknown): boolean {
 }
 
 async function shouldSkip(event: unknown, ctx: PluginContext): Promise<boolean> {
-  const enabled = (await ctx.kv.get<boolean>(KEY.enabled)) ?? true;
-  if (!enabled) return true;
+  const enabled = asHtml(await ctx.kv.get<string>(KEY.enabled));
+  if (enabled === "false") return true; // default: enabled
   const path = pathFromEvent(event);
   if (path && path.startsWith("/_emdash")) return true; // never touch the admin
   return isExcluded(path, await ctx.kv.get<string>(KEY.excludePaths));
@@ -72,6 +73,8 @@ export function insertScriptsPlugin(): PluginDescriptor {
     version: "1.0.0",
     format: "native",
     entrypoint: new URL("./index.ts", import.meta.url).pathname,
+    adminEntry: new URL("./admin.tsx", import.meta.url).pathname,
+    adminPages: [{ path: "/settings", label: "Insert Scripts", icon: "code" }],
     options: {},
   };
 }
@@ -88,35 +91,31 @@ export function createPlugin() {
       "render:inject-body-end": { handler: injectBodyEnd, priority: 10 },
     },
 
-    admin: {
-      settingsSchema: {
-        enabled: {
-          type: "boolean",
-          label: "Enable injection",
-          default: true,
-        },
-        headScripts: {
-          type: "text",
-          multiline: true,
-          label: "Header — inside <head>",
-          help: "Analytics, GTM, verification meta tags, preconnects, inline styles.",
-          default: "",
-        },
-        bodyEndScripts: {
-          type: "text",
-          multiline: true,
-          label: "Footer — before </body>",
-          help: "Deferred scripts, chat widgets, pixels.",
-          default: "",
-        },
-        excludePaths: {
-          type: "text",
-          multiline: true,
-          label: "Exclude paths (one per line)",
-          help: "Trailing wildcard supported, e.g. /checkout or /tag/*",
-          default: "",
+    routes: {
+      "settings": {
+        handler: async (ctx: RouteContext) => {
+          const entries = await ctx.kv.list("settings:");
+          const settings: Record<string, string> = {};
+          for (const { key, value } of entries) {
+            settings[key.replace("settings:", "")] =
+              typeof value === "string" ? value : String(value ?? "");
+          }
+          return { settings };
         },
       },
+      "settings/save": {
+        handler: async (ctx: RouteContext) => {
+          const { settings } = ctx.input as { settings: Record<string, string> };
+          for (const [key, value] of Object.entries(settings)) {
+            await ctx.kv.set(`settings:${key}`, value ?? "");
+          }
+          return { ok: true };
+        },
+      },
+    },
+
+    admin: {
+      pages: [{ path: "/settings", label: "Insert Scripts", icon: "code" }],
     },
   });
 }
