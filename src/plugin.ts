@@ -64,10 +64,9 @@ function pathIsExcluded(path: string, patterns: string[]): boolean {
 }
 
 export default definePlugin({
-  // ---- Admin panel UI (Settings → Insert Headers and Footers) -------------
-  // NOTE: if the settings form doesn't render, your build may expect this
-  // block in the DESCRIPTOR instead — move `admin` to src/index.ts's return.
-  // And if it spells multiline fields `{ type: "textarea" }`, swap the type.
+  id: "emdash-insert-scripts",
+  version: "1.0.4",
+  capabilities: ["hooks.page-fragments:register"],
   admin: {
     settingsSchema: {
       enabled: {
