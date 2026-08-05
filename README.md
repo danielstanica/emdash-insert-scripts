@@ -1,79 +1,66 @@
-# Insert Scripts for EmDash
+# emdash-insert-scripts
 
-Inject arbitrary HTML — scripts, `<meta>`, `<link>`, inline CSS, GTM/analytics,
-verification tags, chat widgets — into three page injection points on every
-public page, managed from the EmDash admin panel:
+Inject custom scripts, styles, meta tags, and HTML into every page of your
+EmDash site — configured from the admin panel. Two injection points:
 
-| Setting | Injected |
-| ------- | -------- |
-| Header  | inside `<head>` |
-| Body    | right after `<body>` opens |
-| Footer  | right before `</body>` closes |
+- **Header** — inside `<head>` (via `render:inject-head`)
+- **Footer** — right before `</body>` (via `render:inject-body-end`)
 
 Plus a master on/off switch and a path-exclusion list. Admin routes
-(`/_emdash/*`) are skipped by default.
+(`/_emdash/*`) are never touched.
 
-## Why this isn't a one-click / marketplace plugin
+## Requirements
 
-It uses the `page:fragments` hook to inject into the page shell. That requires a
-**native, in-process plugin** (build-time integration). Marketplace plugins run
-sandboxed and can't do this. So it's distributed as a package and installed via
-your Astro config — same as any config-based EmDash plugin.
+EmDash with the `page:inject` capability and `render:inject-head` /
+`render:inject-body-end` hooks (EmDash `>=0.21`). This is a **native** plugin —
+it installs via your Astro config, not the marketplace, because raw HTML
+injection requires build-time integration.
 
-## Install (for any EmDash site)
-
-**1. Add the package.**
+## Install
 
 ```bash
-# from npm
-npm install emdash-insert-scripts
-# …or straight from GitHub, no npm needed
 npm install github:danielstanica/emdash-insert-scripts
 ```
 
-**2. Register it in `astro.config.mjs`** — in `plugins: []`, never `sandboxed: []`:
+Register it in `astro.config.mjs` — in `plugins: []` (native plugins only run
+there):
 
 ```js
 import { defineConfig } from "astro/config";
-import emdash from "emdash/astro";
-import insertScripts from "emdash-insert-scripts";
+import emdash from "emdash";
+import { insertScriptsPlugin } from "emdash-insert-scripts";
 
 export default defineConfig({
   integrations: [
     emdash({
       plugins: [
         // ...your other plugins...
-        insertScripts(),
+        insertScriptsPlugin(),
       ],
     }),
   ],
 });
 ```
 
-**3. Deploy, then configure** at **Admin → Settings → Insert Headers and Footers**.
-
-The package ships TypeScript source and is transpiled by your site's Vite build —
-there's no separate build step for consumers.
+Deploy, then configure at **Admin → Plugins → Insert Scripts → Settings**.
 
 ## Structure
 
-EmDash loads plugins as a descriptor plus a separate runtime module:
+Single-file native plugin, mirroring the shape EmDash uses for
+`@jdevalk/emdash-plugin-seo`:
 
-- `src/index.ts` — descriptor (build-time metadata + `entrypoint` pointer)
-- `src/plugin.ts` — definition (runtime `page:fragments` hook + settings form)
-- `package.json` — `exports["."]` → descriptor, `exports["./plugin"]` → definition
+- `insertScriptsPlugin()` — descriptor (build time), imported in the config
+- `createPlugin` (default export) — runtime definition with the inject hooks,
+  loaded via the descriptor's `entrypoint`
 
-## Compatibility (EmDash is v0.x)
+Settings persist to plugin KV under `settings:*` and are read back in the
+inject hooks.
 
-Two spots may need a one-line tweak on a given EmDash build; both are annotated
-in the source:
+## Security
 
-1. **Settings form location** — `admin.settingsSchema` lives in `src/plugin.ts`.
-   If the form doesn't render, move the `admin` block into the descriptor in
-   `src/index.ts`.
-2. **`page:fragments` return shape** — returns
-   `{ head, bodyStart, bodyEnd }` string arrays. Adjust if your build names the
-   footer point differently.
+This plugin injects raw, unescaped HTML into every page — the one thing
+EmDash's sandbox is designed to prevent, which is why it must be native.
+Treat whatever you paste into the settings fields as trusted first-party code.
 
 ## License
 
