@@ -2,7 +2,7 @@ import { definePlugin } from "emdash";
 import type { PluginDescriptor, PluginContext, RouteContext } from "emdash";
 
 /**
- * emdash-insert-scripts
+ * emdash-insertscripts
  * =========================================================================
  * Native EmDash plugin. Injects admin-configured HTML/scripts into the
  * rendered page via render:inject-head and render:inject-body-end, with a
@@ -82,7 +82,7 @@ export function insertScriptsPlugin(): PluginDescriptor {
 // ---- Definition (runtime) — default export, loaded via entrypoint -------
 export function createPlugin() {
   return definePlugin({
-    id: "insert-scripts",
+    id: "insertscripts",
     version: "1.0.0",
     capabilities: ["page:inject"],
 
