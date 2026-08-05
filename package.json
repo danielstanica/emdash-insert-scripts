@@ -1,6 +1,6 @@
 {
   "name": "emdash-insert-scripts",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Inject custom scripts, styles and meta tags into the <head>, after <body>, and before </body> of every EmDash page — configured from the admin panel.",
   "type": "module",
   "license": "MIT",
