@@ -14,8 +14,7 @@ import type {
  *
  * Verified against emdash@0.31.1 source:
  *   - hook:        "page:fragments"
- *   - capability:  "hooks.page-fragments:register"  (page:inject is a
- *                  deprecated alias and does NOT satisfy this hook)
+ *   - capability:  "hooks.page-fragments:register"
  *   - return:      PageFragmentContribution[] with kind:"html" and
  *                  placement "head" | "body:start" | "body:end"
  */
@@ -45,11 +44,10 @@ async function pageFragments(
   event: PageFragmentEvent,
   ctx: PluginContext,
 ): Promise<PageFragmentContribution[]> {
-  // Master switch (stored as a string by the settings form; default on).
   if (asHtml(await ctx.kv.get<string>(KEY.enabled)) === "false") return [];
 
   const path = event.page?.path ?? "";
-  if (path.startsWith("/_emdash")) return []; // never touch the admin
+  if (path.startsWith("/_emdash")) return [];
   if (isExcluded(path, await ctx.kv.get<string>(KEY.excludePaths))) return [];
 
   const head = asHtml(await ctx.kv.get<string>(KEY.head));
@@ -66,7 +64,7 @@ async function pageFragments(
 export function insertScriptsPlugin(): PluginDescriptor {
   return {
     id: "insertscripts",
-    version: "1.0.7",
+    version: "1.0.8",
     format: "native",
     entrypoint: new URL("./index.ts", import.meta.url).pathname,
     adminEntry: new URL("./admin.tsx", import.meta.url).pathname,
@@ -75,11 +73,11 @@ export function insertScriptsPlugin(): PluginDescriptor {
   };
 }
 
-// ---- Definition (runtime) — default export, loaded via entrypoint -------
+// ---- Definition (runtime) — createPlugin is imported by name at build ---
 export function createPlugin() {
   return definePlugin({
     id: "insertscripts",
-    version: "1.0.7",
+    version: "1.0.8",
     capabilities: ["hooks.page-fragments:register"],
 
     hooks: {
