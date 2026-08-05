@@ -69,7 +69,7 @@ async function injectBodyEnd(event: unknown, ctx: PluginContext): Promise<string
 // ---- Descriptor (build time) — imported in astro.config.mjs -------------
 export function insertScriptsPlugin(): PluginDescriptor {
   return {
-    id: "insert-scripts",
+    id: "insertscripts",
     version: "1.0.0",
     format: "native",
     entrypoint: new URL("./index.ts", import.meta.url).pathname,
