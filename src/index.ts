@@ -65,8 +65,8 @@ async function pageFragments(
 // ---- Descriptor (build time) — imported in astro.config.mjs -------------
 export function insertScriptsPlugin(): PluginDescriptor {
   return {
-    id: "insert-scripts",
-    version: "1.0.0",
+    id: "insertscripts",
+    version: "1.0.7",
     format: "native",
     entrypoint: new URL("./index.ts", import.meta.url).pathname,
     adminEntry: new URL("./admin.tsx", import.meta.url).pathname,
@@ -78,8 +78,8 @@ export function insertScriptsPlugin(): PluginDescriptor {
 // ---- Definition (runtime) — default export, loaded via entrypoint -------
 export function createPlugin() {
   return definePlugin({
-    id: "insert-scripts",
-    version: "1.0.0",
+    id: "insertscripts",
+    version: "1.0.7",
     capabilities: ["hooks.page-fragments:register"],
 
     hooks: {
