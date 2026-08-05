@@ -1,7 +1,7 @@
 {
   "name": "emdash-insert-scripts",
-  "version": "1.0.3",
-  "description": "Inject custom scripts, styles and meta tags into the <head>, after <body>, and before </body> of every EmDash page — configured from the admin panel.",
+  "version": "1.0.4",
+  "description": "Inject custom scripts, styles and meta tags into the <head>, after <body>, and before </body> of every EmDash page \u2014 configured from the admin panel.",
   "type": "module",
   "license": "MIT",
   "author": "Daniel Stanica",
@@ -13,17 +13,29 @@
   "bugs": {
     "url": "https://github.com/danielstanica/emdash-insert-scripts/issues"
   },
-  "keywords": ["emdash", "emdash-plugin", "cms", "scripts", "analytics", "gtm", "head", "footer"],
-  "files": ["src", "README.md", "LICENSE"],
+  "keywords": [
+    "emdash",
+    "emdash-plugin",
+    "cms",
+    "scripts",
+    "analytics",
+    "gtm",
+    "head",
+    "footer"
+  ],
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
-    ".": "./src/index.ts",
-    "./plugin": "./src/plugin.ts"
+    ".": "./src/index.ts"
   },
   "publishConfig": {
     "access": "public"
   },
   "peerDependencies": {
-    "emdash": "^0.1.0"
+    "emdash": ">=0.21.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0"
