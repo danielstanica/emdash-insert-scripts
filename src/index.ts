@@ -1,18 +1,23 @@
 import { definePlugin } from "emdash";
-import type { PluginDescriptor, PluginContext, RouteContext } from "emdash";
+import type {
+  PluginDescriptor,
+  PluginContext,
+  PageFragmentEvent,
+  PageFragmentContribution,
+} from "emdash";
 
 /**
- * emdash-insertscripts
+ * emdash-insert-scripts (EmDash 0.31.x)
  * =========================================================================
- * Native EmDash plugin. Injects admin-configured HTML/scripts into the
- * rendered page via render:inject-head and render:inject-body-end, with a
- * React settings page under Plugins → Insert Scripts.
+ * Injects admin-configured HTML into every public page via the page:fragments
+ * hook, with a React settings page under Plugins → Insert Scripts.
  *
- * Structure follows @jdevalk/emdash-plugin-seo (same EmDash generation):
- *   - descriptor factory (build time) with adminEntry + adminPages
- *   - createPlugin() default (runtime) with hooks, routes, admin.pages
- *   - src/admin.tsx exports `pages` mapping each adminPage path to a component
- * Settings persist to plugin KV under `settings:*`.
+ * Verified against emdash@0.31.1 source:
+ *   - hook:        "page:fragments"
+ *   - capability:  "hooks.page-fragments:register"  (page:inject is a
+ *                  deprecated alias and does NOT satisfy this hook)
+ *   - return:      PageFragmentContribution[] with kind:"html" and
+ *                  placement "head" | "body:start" | "body:end"
  */
 
 const KEY = {
@@ -26,19 +31,7 @@ function asHtml(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
-function pathFromEvent(event: unknown): string | null {
-  const e = event as Record<string, any> | null;
-  const raw = e?.page?.path ?? e?.url ?? e?.path ?? e?.pathname ?? e?.request?.url ?? null;
-  if (!raw) return null;
-  try {
-    return new URL(raw, "http://x").pathname;
-  } catch {
-    return typeof raw === "string" ? raw : null;
-  }
-}
-
-function isExcluded(path: string | null, raw: unknown): boolean {
-  if (!path) return false;
+function isExcluded(path: string, raw: unknown): boolean {
   const patterns = asHtml(raw)
     .split("\n")
     .map((l) => l.trim())
@@ -48,28 +41,31 @@ function isExcluded(path: string | null, raw: unknown): boolean {
   );
 }
 
-async function shouldSkip(event: unknown, ctx: PluginContext): Promise<boolean> {
-  const enabled = asHtml(await ctx.kv.get<string>(KEY.enabled));
-  if (enabled === "false") return true; // default: enabled
-  const path = pathFromEvent(event);
-  if (path && path.startsWith("/_emdash")) return true; // never touch the admin
-  return isExcluded(path, await ctx.kv.get<string>(KEY.excludePaths));
-}
+async function pageFragments(
+  event: PageFragmentEvent,
+  ctx: PluginContext,
+): Promise<PageFragmentContribution[]> {
+  // Master switch (stored as a string by the settings form; default on).
+  if (asHtml(await ctx.kv.get<string>(KEY.enabled)) === "false") return [];
 
-async function injectHead(event: unknown, ctx: PluginContext): Promise<string> {
-  if (await shouldSkip(event, ctx)) return "";
-  return asHtml(await ctx.kv.get<string>(KEY.head));
-}
+  const path = event.page?.path ?? "";
+  if (path.startsWith("/_emdash")) return []; // never touch the admin
+  if (isExcluded(path, await ctx.kv.get<string>(KEY.excludePaths))) return [];
 
-async function injectBodyEnd(event: unknown, ctx: PluginContext): Promise<string> {
-  if (await shouldSkip(event, ctx)) return "";
-  return asHtml(await ctx.kv.get<string>(KEY.bodyEnd));
+  const head = asHtml(await ctx.kv.get<string>(KEY.head));
+  const bodyEnd = asHtml(await ctx.kv.get<string>(KEY.bodyEnd));
+
+  const out: PageFragmentContribution[] = [];
+  if (head) out.push({ kind: "html", placement: "head", html: head, key: "insert-scripts-head" });
+  if (bodyEnd)
+    out.push({ kind: "html", placement: "body:end", html: bodyEnd, key: "insert-scripts-body-end" });
+  return out;
 }
 
 // ---- Descriptor (build time) — imported in astro.config.mjs -------------
 export function insertScriptsPlugin(): PluginDescriptor {
   return {
-    id: "insertscripts",
+    id: "insert-scripts",
     version: "1.0.0",
     format: "native",
     entrypoint: new URL("./index.ts", import.meta.url).pathname,
@@ -82,18 +78,17 @@ export function insertScriptsPlugin(): PluginDescriptor {
 // ---- Definition (runtime) — default export, loaded via entrypoint -------
 export function createPlugin() {
   return definePlugin({
-    id: "insertscripts",
+    id: "insert-scripts",
     version: "1.0.0",
-    capabilities: ["page:inject"],
+    capabilities: ["hooks.page-fragments:register"],
 
     hooks: {
-      "render:inject-head": { handler: injectHead, priority: 10 },
-      "render:inject-body-end": { handler: injectBodyEnd, priority: 10 },
+      "page:fragments": { handler: pageFragments, priority: 10 },
     },
 
     routes: {
       "settings": {
-        handler: async (ctx: RouteContext) => {
+        handler: async (ctx: any) => {
           const entries = await ctx.kv.list("settings:");
           const settings: Record<string, string> = {};
           for (const { key, value } of entries) {
@@ -104,7 +99,7 @@ export function createPlugin() {
         },
       },
       "settings/save": {
-        handler: async (ctx: RouteContext) => {
+        handler: async (ctx: any) => {
           const { settings } = ctx.input as { settings: Record<string, string> };
           for (const [key, value] of Object.entries(settings)) {
             await ctx.kv.set(`settings:${key}`, value ?? "");
