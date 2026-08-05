@@ -1,7 +1,7 @@
 import { apiFetch as baseFetch, parseApiResponse } from "emdash/plugin-utils";
 import * as React from "react";
 
-const API = "/_emdash/api/plugins/insertscripts";
+const API = "/_emdash/api/plugins/insert-scripts";
 
 async function apiFetch(route: string, body?: unknown): Promise<Response> {
   return baseFetch(`${API}/${route}`, {
