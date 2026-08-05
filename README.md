@@ -43,7 +43,7 @@ export default defineConfig({
     emdash({
       plugins: [
         // ...your other plugins...
-        insertHeadersAndFooters(),
+        insertScripts(),
       ],
     }),
   ],
